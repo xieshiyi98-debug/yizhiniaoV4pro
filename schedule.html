@@ -66,8 +66,25 @@ function getTodayWeek() {
   }
   return weeks[0];
 }
-let activeWeek = getTodayWeek();
+// 找最近有课的周（在当前周之后）
+function findNextWeekWithData(currentWeek) {
+  const weeks = Object.keys(DATA.weekDays).sort();
+  for (const wk of weeks) {
+    if (wk >= currentWeek) return wk;
+  }
+  return weeks[weeks.length - 1] || currentWeek;
+}
+
+// 当前周的 Monday
+function getTodayMondayStr() {
+  const n = new Date();
+  const mon = new Date(n.getFullYear(), n.getMonth(), n.getDate() - (n.getDay() === 0 ? 6 : n.getDay() - 1));
+  return mon.getFullYear() + '-' + String(mon.getMonth()+1).padStart(2,'0') + '-' + String(mon.getDate()).padStart(2,'0');
+}
+
+let activeWeek = getTodayMondayStr();
 let activeTeacher = '';
+let showingFallbackWeek = false;
 const colors = ['#5e72e4','#2dce89','#fb6340','#11cdef','#f5365c','#8965e0','#ffd600','#00bcd4','#ff6f00','#8d6e63','#26a69a','#7e57c2','#66bb6a','#ef5350','#42a5f5'];
 
 function getLessonColor(classId) {
@@ -87,15 +104,31 @@ function getMondayStr(week) {
 function render() {
   const realWeek = getMondayStr(activeWeek);
   const weekData = DATA.weekDays[realWeek] || [];
-  const monday = new Date(realWeek);
+  const monday = new Date(realWeek + 'T00:00:00+08:00');
   const sunday = new Date(monday.getTime() + 6*86400000);
-  document.getElementById('weekLabel').textContent = monday.toISOString().substring(5,10) + ' ~ ' + sunday.toISOString().substring(5,10);
+  document.getElementById('weekLabel').textContent = monday.getMonth()+1 + '-' + String(monday.getDate()).padStart(2,'0') + ' ~ ' + sunday.getMonth()+1 + '-' + String(sunday.getDate()).padStart(2,'0');
 
   let totalLessons = 0;
   for(let d=0; d<7; d++) totalLessons += (weekData[d] || []).length;
 
+  // If current week has no data, show empty columns with hint
   if (totalLessons === 0) {
-    document.getElementById('timetable').innerHTML = '<div class="empty-msg">本周无课程安排，请切换其他周次查看。</div>';
+    // Find next week with data
+    const nextWeek = findNextWeekWithData(realWeek);
+    if (nextWeek !== realWeek && DATA.weekDays[nextWeek]) {
+      activeWeek = nextWeek;
+      render();
+      return;
+    }
+    // No data at all - show empty grid
+    let html = '<div class="schedule">';
+    for(let i=0; i<7; i++) {
+      const dayDate = new Date(monday.getTime() + i*86400000);
+      const dateStr = (dayDate.getMonth()+1) + '-' + String(dayDate.getDate()).padStart(2,'0');
+      html += '<div class="day-col"><div class="day-header">星期' + DAYS[i] + '<br><span class="date">' + dateStr + '</span></div></div>';
+    }
+    html += '</div>';
+    document.getElementById('timetable').innerHTML = '<div class="empty-msg" style="margin-bottom:10px">本周暂无课程安排，已跳转到最近有课的周</div>' + html;
     renderPills();
     return;
   }
@@ -166,7 +199,7 @@ function filterTeacher(name) {
 }
 function prevWeek() { const d = new Date(getMondayStr(activeWeek) + 'T00:00:00+08:00'); d.setDate(d.getDate() - 7); activeWeek = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); render(); }
 function nextWeek() { const d = new Date(getMondayStr(activeWeek) + 'T00:00:00+08:00'); d.setDate(d.getDate() + 7); activeWeek = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); render(); }
-function thisWeek() { activeWeek = getTodayWeek(); render(); }
+function thisWeek() { activeWeek = getTodayMondayStr(); render(); }
 function searchFn(q) {
   if(!q) { document.querySelectorAll('.slot').forEach(s=>s.style.display=''); return; }
   q = q.toLowerCase();
