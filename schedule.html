@@ -76,12 +76,12 @@ function getLessonColor(classId) {
 }
 
 function getMondayStr(week) {
-  const d = new Date(week);
-  const mon = new Date(d);
+  const d = new Date(week + 'T00:00:00+08:00');
   const day = d.getDay();
+  const mon = new Date(d);
   if (day !== 0) mon.setDate(d.getDate() - day + 1);
   else mon.setDate(d.getDate() - 6);
-  return mon.toISOString().substring(0,10);
+  return mon.getFullYear() + '-' + String(mon.getMonth()+1).padStart(2,'0') + '-' + String(mon.getDate()).padStart(2,'0');
 }
 
 function render() {
