@@ -54,7 +54,7 @@ const DATA = {"weekDays":{"2026-08-09":[[{"classId":"1945200","arrangingCoursesI
 const DAYS = ['一','二','三','四','五','六','日'];
 const DAY_ORDER = [1,2,3,4,5,6,0]; // Mon..Sun (对应getDay索引)
 // 每次打开页面，自动定位到当前日期所在的周
-21455909function getTodayWeek() {
+function getTodayWeek() {
   const now = new Date();
   const mon = new Date(now);
   mon.setDate(now.getDate() - (now.getDay() === 0 ? 6 : now.getDay() - 1));
