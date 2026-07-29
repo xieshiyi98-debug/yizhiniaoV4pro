@@ -164,9 +164,9 @@ function filterTeacher(name) {
   activeTeacher = name || '';
   render();
 }
-function prevWeek() { const d = new Date(getMondayStr(activeWeek)); d.setDate(d.getDate() - 7); activeWeek = d.toISOString().substring(0,10); render(); }
-function nextWeek() { const d = new Date(getMondayStr(activeWeek)); d.setDate(d.getDate() + 7); activeWeek = d.toISOString().substring(0,10); render(); }
-function thisWeek() { const mon = new Date(); mon.setDate(mon.getDate() - (mon.getDay()===0?6:mon.getDay()-1)); activeWeek = mon.toISOString().substring(0,10); render(); }
+function prevWeek() { const d = new Date(getMondayStr(activeWeek) + 'T00:00:00+08:00'); d.setDate(d.getDate() - 7); activeWeek = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); render(); }
+function nextWeek() { const d = new Date(getMondayStr(activeWeek) + 'T00:00:00+08:00'); d.setDate(d.getDate() + 7); activeWeek = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); render(); }
+function thisWeek() { activeWeek = getTodayWeek(); render(); }
 function searchFn(q) {
   if(!q) { document.querySelectorAll('.slot').forEach(s=>s.style.display=''); return; }
   q = q.toLowerCase();
