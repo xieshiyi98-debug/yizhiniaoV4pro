@@ -53,29 +53,8 @@ const DATA = {"weekDays":{"2026-08-10":[[{"classId":"1945200","arrangingCoursesI
 // 中国习惯：周一开始
 const DAYS = ['一','二','三','四','五','六','日'];
 const DAY_ORDER = [1,2,3,4,5,6,0]; // Mon..Sun (对应getDay索引)
-// 每次打开页面，自动定位到当前日期所在的周（纯本地时间）
-function getTodayWeek() {
-  const n = new Date();
-  const mon = new Date(n.getFullYear(), n.getMonth(), n.getDate() - (n.getDay() === 0 ? 6 : n.getDay() - 1));
-  const key = mon.getFullYear() + '-' + String(mon.getMonth()+1).padStart(2,'0') + '-' + String(mon.getDate()).padStart(2,'0');
-  if (DATA.weekDays[key]) return key;
-  const weeks = Object.keys(DATA.weekDays).sort();
-  if (!weeks.length) return key;
-  for (let i = weeks.length - 1; i >= 0; i--) {
-    if (weeks[i] <= key) return weeks[i];
-  }
-  return weeks[0];
-}
-// 找最近有课的周（在当前周之后）
-function findNextWeekWithData(currentWeek) {
-  const weeks = Object.keys(DATA.weekDays).sort();
-  for (const wk of weeks) {
-    if (wk >= currentWeek) return wk;
-  }
-  return weeks[weeks.length - 1] || currentWeek;
-}
 
-// 当前周的 Monday
+// 当前周的 Monday（纯本地时间，+08:00）
 function getTodayMondayStr() {
   const n = new Date();
   const mon = new Date(n.getFullYear(), n.getMonth(), n.getDate() - (n.getDay() === 0 ? 6 : n.getDay() - 1));
@@ -84,7 +63,6 @@ function getTodayMondayStr() {
 
 let activeWeek = getTodayMondayStr();
 let activeTeacher = '';
-let showingFallbackWeek = false;
 const colors = ['#5e72e4','#2dce89','#fb6340','#11cdef','#f5365c','#8965e0','#ffd600','#00bcd4','#ff6f00','#8d6e63','#26a69a','#7e57c2','#66bb6a','#ef5350','#42a5f5'];
 
 function getLessonColor(classId) {
@@ -101,34 +79,32 @@ function getMondayStr(week) {
   return mon.getFullYear() + '-' + String(mon.getMonth()+1).padStart(2,'0') + '-' + String(mon.getDate()).padStart(2,'0');
 }
 
+function localDateStr(d) {
+  return String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
 function render() {
   const realWeek = getMondayStr(activeWeek);
   const weekData = DATA.weekDays[realWeek] || [];
   const monday = new Date(realWeek + 'T00:00:00+08:00');
   const sunday = new Date(monday.getTime() + 6*86400000);
-  document.getElementById('weekLabel').textContent = monday.getMonth()+1 + '-' + String(monday.getDate()).padStart(2,'0') + ' ~ ' + sunday.getMonth()+1 + '-' + String(sunday.getDate()).padStart(2,'0');
+  const isThisWeek = realWeek === getTodayMondayStr();
+  document.getElementById('weekLabel').textContent = (isThisWeek ? '本周 · ' : '') + localDateStr(monday) + ' ~ ' + localDateStr(sunday);
 
   let totalLessons = 0;
   for(let d=0; d<7; d++) totalLessons += (weekData[d] || []).length;
 
-  // If current week has no data, show empty columns with hint
+  // 本周无课时显示空本周，不再自动跳转
   if (totalLessons === 0) {
-    // Find next week with data
-    const nextWeek = findNextWeekWithData(realWeek);
-    if (nextWeek !== realWeek && DATA.weekDays[nextWeek]) {
-      activeWeek = nextWeek;
-      render();
-      return;
-    }
-    // No data at all - show empty grid
     let html = '<div class="schedule">';
     for(let i=0; i<7; i++) {
       const dayDate = new Date(monday.getTime() + i*86400000);
-      const dateStr = (dayDate.getMonth()+1) + '-' + String(dayDate.getDate()).padStart(2,'0');
-      html += '<div class="day-col"><div class="day-header">星期' + DAYS[i] + '<br><span class="date">' + dateStr + '</span></div></div>';
+      const dateStr = localDateStr(dayDate);
+      const isToday = dayDate.toDateString() === new Date().toDateString();
+      html += '<div class="day-col"><div class="day-header" style="' + (isToday?'background:#fff8e1;':'') + '">星期' + DAYS[i] + '<br><span class="date">' + dateStr + '</span></div></div>';
     }
     html += '</div>';
-    document.getElementById('timetable').innerHTML = '<div class="empty-msg" style="margin-bottom:10px">本周暂无课程安排，已跳转到最近有课的周</div>' + html;
+    document.getElementById('timetable').innerHTML = '<div class="empty-msg" style="margin-bottom:10px">本周暂无课程安排</div>' + html;
     renderPills();
     return;
   }
@@ -137,7 +113,7 @@ function render() {
   for(let i=0; i<7; i++) {
     const d = DAY_ORDER[i]; // Mon..Sun 顺序
     const dayDate = new Date(monday.getTime() + i*86400000);
-    const dateStr = dayDate.toISOString().substring(5,10);
+    const dateStr = localDateStr(dayDate);
     const isToday = dayDate.toDateString() === new Date().toDateString();
     const slots = (weekData[d] || []).slice().sort((a,b) => (a.beginDate||'').localeCompare(b.beginDate||''));
 
